@@ -61,54 +61,71 @@
       <div class="container">
         <!-- 首页 -->
         <section v-if="currentPage === 'home'" class="page active">
-          <div class="filter-bar">
-            <select v-model="categoryFilter" @change="fetchTasks">
-              <option value="all">所有分类</option>
-              <option v-for="category in categories" :key="category.id" :value="category.name">
-                {{ category.name }}
-              </option>
-              <option value="design">设计</option>
-              <option value="development">开发</option>
-              <option value="writing">写作</option>
-              <option value="translation">翻译</option>
-              <option value="reward">悬赏</option>
-              <option value="game">游戏</option>
-              <option value="trade">交易</option>
-              <option value="charity">公益</option>
-              <option value="other">其他</option>
-            </select>
-            <div class="search-container">
-              <input 
-                type="text" 
-                v-model="searchTerm" 
-                placeholder="搜索任务..."
-              >
-              <button class="search-btn" @click="fetchTasks">
-                🔍
-              </button>
-            </div>
-          </div>
-          
-          <!-- 四大分类竖列显示 -->
-          <div class="categories-grid">
-            <!-- 悬赏分类 -->
-            <div class="category-column">
-              <div class="category-header">
-                <h3>悬赏</h3>
+          <div class="home-grid">
+            <aside class="sidebar">
+              <div class="panel">
+                <h3 class="panel-title">筛选条件</h3>
+                <div class="panel-body">
+                  <label>分类</label>
+                  <select v-model="categoryFilter" @change="fetchTasks">
+                    <option value="all">所有分类</option>
+                    <option v-for="category in categories" :key="category.id" :value="category.name">
+                      {{ category.name }}
+                    </option>
+                    <option value="design">设计</option>
+                    <option value="development">开发</option>
+                    <option value="writing">写作</option>
+                    <option value="translation">翻译</option>
+                    <option value="reward">悬赏</option>
+                    <option value="game">游戏</option>
+                    <option value="trade">交易</option>
+                    <option value="charity">公益</option>
+                    <option value="other">其他</option>
+                  </select>
+
+                  <label class="mt-12">状态</label>
+                  <select v-model="activeCategory" @change="fetchTasks">
+                    <option value="all">全部</option>
+                    <option value="open">进行中</option>
+                    <option value="completed">已完成</option>
+                  </select>
+
+                  <label class="mt-12">关键字</label>
+                  <div class="search-container">
+                    <input type="text" v-model="searchTerm" placeholder="搜索任务...">
+                    <button class="search-btn" @click="fetchTasks">🔍</button>
+                  </div>
+                </div>
               </div>
-              <div class="category-tasks">
-                <div 
-                  v-for="task in getTasksByCategory('reward')" 
-                  :key="task.id" 
-                  class="task-card" 
+
+              <div class="panel mt-16">
+                <h3 class="panel-title">热门分类</h3>
+                <div class="category-tags">
+                  <button class="category-tag" :class="{ active: activeCategory=== 'reward'}" @click="activeCategory='reward'">悬赏</button>
+                  <button class="category-tag" :class="{ active: activeCategory=== 'game'}" @click="activeCategory='game'">游戏</button>
+                  <button class="category-tag" :class="{ active: activeCategory=== 'development'}" @click="activeCategory='development'">开发</button>
+                  <button class="category-tag" :class="{ active: activeCategory=== 'charity'}" @click="activeCategory='charity'">公益</button>
+                </div>
+              </div>
+            </aside>
+
+            <section class="main-content">
+              <div class="task-list">
+                <div
+                  v-for="task in getTasksForHome()"
+                  :key="task.id"
+                  class="task-card"
                   @click="showTaskDetail(task)"
                 >
                   <div class="task-header">
                     <div class="task-title">{{ task.title }}</div>
                     <div class="task-reward">¥{{ task.reward }}</div>
                   </div>
-                  <div class="task-status" :class="task.status">
-                    {{ task.status === 'open' ? '进行中' : '已完成' }}
+                  <div>
+                    <span class="task-category">{{ categoryNames[task.category] || task.category }}</span>
+                    <span class="task-status" :class="task.status">
+                      {{ task.status === 'open' ? '进行中' : '已完成' }}
+                    </span>
                   </div>
                   <div class="task-description">{{ task.description }}</div>
                   <div class="task-footer">
@@ -117,139 +134,33 @@
                     <span v-if="task.assignee" class="task-assignee">✅ {{ task.assignee }}</span>
                   </div>
                 </div>
-                <div v-if="getTasksByCategory('reward').length === 0" class="empty-state">
-                  <div class="empty-state-text">暂无任务</div>
+
+                <div v-if="getTasksForHome().length === 0" class="empty-state">
+                  <div class="empty-state-icon">📋</div>
+                  <div class="empty-state-text">暂无任务，稍后再来看看</div>
                 </div>
               </div>
-            </div>
-            
-            <!-- 游戏分类 -->
-            <div class="category-column">
-              <div class="category-header">
-                <h3>游戏</h3>
+            </section>
+
+            <aside class="right-panel">
+              <div class="panel">
+                <h3 class="panel-title">今日热榜</h3>
+                <ul class="hot-list">
+                  <li v-for="task in getTasksForHome().slice(0, 6)" :key="task.id" @click="showTaskDetail(task)">
+                    <span>·</span> {{ task.title }}
+                  </li>
+                </ul>
               </div>
-              <div class="category-tasks">
-                <div 
-                  v-for="task in getTasksByCategory('game')" 
-                  :key="task.id" 
-                  class="task-card" 
-                  @click="showTaskDetail(task)"
-                >
-                  <div class="task-header">
-                    <div class="task-title">{{ task.title }}</div>
-                    <div class="task-reward">¥{{ task.reward }}</div>
-                  </div>
-                  <div class="task-status" :class="task.status">
-                    {{ task.status === 'open' ? '进行中' : '已完成' }}
-                  </div>
-                  <div class="task-description">{{ task.description }}</div>
-                  <div class="task-footer">
-                    <span>📅 {{ formatDate(task.deadline) }}</span>
-                    <span>👤 {{ task.publisher }}</span>
-                    <span v-if="task.assignee" class="task-assignee">✅ {{ task.assignee }}</span>
-                  </div>
-                </div>
-                <div v-if="getTasksByCategory('game').length === 0" class="empty-state">
-                  <div class="empty-state-text">暂无任务</div>
+
+              <div class="panel mt-16">
+                <h3 class="panel-title">统计</h3>
+                <div class="stats-list">
+                  <div class="stat-item"><strong>{{ tasks.length }}</strong><span>任务总量</span></div>
+                  <div class="stat-item"><strong>{{ tasks.filter(t => t.status === 'open').length }}</strong><span>进行中</span></div>
+                  <div class="stat-item"><strong>{{ tasks.filter(t => t.status === 'completed').length }}</strong><span>已完成</span></div>
                 </div>
               </div>
-            </div>
-            
-            <!-- 公益分类 -->
-            <div class="category-column">
-              <div class="category-header">
-                <h3>公益</h3>
-              </div>
-              <div class="category-tasks">
-                <div 
-                  v-for="task in getTasksByCategory('charity')" 
-                  :key="task.id" 
-                  class="task-card" 
-                  @click="showTaskDetail(task)"
-                >
-                  <div class="task-header">
-                    <div class="task-title">{{ task.title }}</div>
-                    <div class="task-reward">¥{{ task.reward }}</div>
-                  </div>
-                  <div class="task-status" :class="task.status">
-                    {{ task.status === 'open' ? '进行中' : '已完成' }}
-                  </div>
-                  <div class="task-description">{{ task.description }}</div>
-                  <div class="task-footer">
-                    <span>📅 {{ formatDate(task.deadline) }}</span>
-                    <span>👤 {{ task.publisher }}</span>
-                    <span v-if="task.assignee" class="task-assignee">✅ {{ task.assignee }}</span>
-                  </div>
-                </div>
-                <div v-if="getTasksByCategory('charity').length === 0" class="empty-state">
-                  <div class="empty-state-text">暂无任务</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 开发分类 -->
-            <div class="category-column">
-              <div class="category-header">
-                <h3>开发</h3>
-              </div>
-              <div class="category-tasks">
-                <div 
-                  v-for="task in getTasksByCategory('development')" 
-                  :key="task.id" 
-                  class="task-card" 
-                  @click="showTaskDetail(task)"
-                >
-                  <div class="task-header">
-                    <div class="task-title">{{ task.title }}</div>
-                    <div class="task-reward">¥{{ task.reward }}</div>
-                  </div>
-                  <div class="task-status" :class="task.status">
-                    {{ task.status === 'open' ? '进行中' : '已完成' }}
-                  </div>
-                  <div class="task-description">{{ task.description }}</div>
-                  <div class="task-footer">
-                    <span>📅 {{ formatDate(task.deadline) }}</span>
-                    <span>👤 {{ task.publisher }}</span>
-                    <span v-if="task.assignee" class="task-assignee">✅ {{ task.assignee }}</span>
-                  </div>
-                </div>
-                <div v-if="getTasksByCategory('development').length === 0" class="empty-state">
-                  <div class="empty-state-text">暂无任务</div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 交易分类 -->
-            <div class="category-column">
-              <div class="category-header">
-                <h3>交易</h3>
-              </div>
-              <div class="category-tasks">
-                <div 
-                  v-for="task in getTasksByCategory('trade')" 
-                  :key="task.id" 
-                  class="task-card" 
-                  @click="showTaskDetail(task)"
-                >
-                  <div class="task-header">
-                    <div class="task-title">{{ task.title }}</div>
-                    <div class="task-reward">¥{{ task.reward }}</div>
-                  </div>
-                  <div class="task-status" :class="task.status">
-                    {{ task.status === 'open' ? '进行中' : '已完成' }}
-                  </div>
-                  <div class="task-description">{{ task.description }}</div>
-                  <div class="task-footer">
-                    <span>📅 {{ formatDate(task.deadline) }}</span>
-                    <span>👤 {{ task.publisher }}</span>
-                    <span v-if="task.assignee" class="task-assignee">✅ {{ task.assignee }}</span>
-                  </div>
-                </div>
-                <div v-if="getTasksByCategory('trade').length === 0" class="empty-state">
-                  <div class="empty-state-text">暂无任务</div>
-                </div>
-              </div>
-            </div>
+            </aside>
           </div>
         </section>
 
@@ -572,6 +483,7 @@ export default {
       categoryFilter: 'all',
       statusFilter: 'all',
       searchTerm: '',
+      activeCategory: 'all',
       showModal: false,
       selectedTask: null,
       isLoading: false,
@@ -590,7 +502,7 @@ export default {
         charity: '公益',
         other: '其他'
       },
-      apiBaseUrl: 'http://localhost:8000/api',
+      apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
       // 分页相关
       currentPageNum: 1,
       totalPages: 1,
@@ -906,6 +818,24 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    getTasksForHome() {
+      let list = Array.isArray(this.tasks) ? this.tasks : [];
+
+      if (this.activeCategory !== 'all') {
+        list = list.filter(task => task.category === this.activeCategory);
+      }
+
+      if (this.searchTerm) {
+        const keyword = this.searchTerm.toLowerCase();
+        list = list.filter(task =>
+          task.title.toLowerCase().includes(keyword) ||
+          task.description.toLowerCase().includes(keyword) ||
+          task.publisher.toLowerCase().includes(keyword)
+        );
+      }
+
+      return list;
     },
     getTasksByCategory(category) {
       return this.tasks.filter(task => task.category === category).slice(0, 10);

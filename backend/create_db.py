@@ -2,7 +2,7 @@ import MySQLdb
 
 # 连接到 MySQL 服务器
 conn = MySQLdb.connect(
-    host='127.0.0.1',
+    host='db',
     user='root',
     password='root'
 )
